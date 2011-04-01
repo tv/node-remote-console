@@ -63,7 +63,7 @@ function returnDebugJS(ns){
             else \n\
               var str = JSON.stringify(obj); \n\
             var img = document.createElement("img"); \n\
-            var url = "http://' + host + ':' + port + '/?count=" + count + "&console=" + encodeURIComponent(str); \n\
+            var url = "http://' + host + ':' + port + '/?console=" + encodeURIComponent(str); \n\
             img.src = url; \n\
             ++count; \n\
         } \n\
