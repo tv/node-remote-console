@@ -63,7 +63,7 @@ function returnDebugJS(ns){
             else \n\
               var str = JSON.stringify(obj); \n\
             var img = document.createElement("img"); \n\
-            var url = "http://' + host + ':' + port + '/?console=" + encodeURIComponent(str); \n\
+            var url = "http://' + host + ':' + port + '/?count=" + count + "&console=" + encodeURIComponent(str); \n\
             img.src = url; \n\
             ++count; \n\
         } \n\
@@ -79,7 +79,19 @@ http.createServer(function (req, res) {
     var request = url.parse(req.url, true);
     var msg =  request.query.console;
     if (msg) {
-        console.log(decodeURIComponent(msg));
+        msg = decodeURIComponent(msg);
+        var count = Number(request.query.count);
+        if (count === logged) {
+          console.log(msg);
+          ++logged;
+          while (logged in queue) {
+            console.log(queue[logged]);
+            delete queue[logged];
+            ++logged;
+          }
+        } else {
+          queue[count] = msg;
+        }
         res.writeHead(200, {'Content-Type': 'image/jpeg'});
         res.end("");
     } else if (req.url.indexOf("/debug.js") === 0){
