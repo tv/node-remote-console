@@ -53,6 +53,10 @@ function parseJson(string){
     }
 };
 
+if (host == 'null') {
+    host = undefined;
+}
+
 function returnDebugJS(ns){
     ns = "window" + (ns ? "." + ns : "");
     return '\n\
