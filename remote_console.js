@@ -59,10 +59,20 @@ function returnDebugJS(ns){
     (function(){ \n\
         var count = 0; \n\
         var log=function(obj) { \n\
-            if(typeof jsDump !== "undefined") \n\
-              var str = jsDump.parse(obj); \n\
-            else \n\
-              var str = JSON.stringify(obj); \n\
+            var str = "", \n\
+                args = log.arguments; \n\
+            for (var i = 0; i < args.length; i++) { \n\
+                try { \n\
+                    str += " | " + JSON.stringify(args[i]); \n\
+                    if(typeof jsDump !== "undefined") { \n\
+                      var str += " | " + jsDump.parse(obj); \n\
+                    } else { \n\
+                      var str += " | " + JSON.stringify(obj); \n\
+                    } \n\
+                } catch(error) { \n\
+                    str += ", [cycle]"; \n\
+                } \n\
+            } \n\
             var img = document.createElement("img"); \n\
             var url = "http://' + rHost + ':' + port + '/?count=" + count + "&console=" + encodeURIComponent(str); \n\
             img.src = url; \n\
