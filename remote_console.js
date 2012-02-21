@@ -38,14 +38,11 @@
 * 
 */
 
-
-
-
 var http = require('http'),
     url = require('url'),
     sys = require('sys'),
-    host = (process.argv[2]) ? process.argv[2] : "127.0.0.1",
-    port = (process.argv[3]) ? process.argv[3] : 8124,
+    host = (process.argv[2]) ? process.argv[2] : "localhost",
+    port = (process.argv[3]) ? process.argv[3] : 8124;
     rHost = (process.argv[4]) ? process.argv[4] : host;
    
 function parseJson(string){
@@ -57,26 +54,23 @@ function parseJson(string){
 };
 
 function returnDebugJS(ns){
-    ns = ns || "window";
-    return '(function(){ \n\
+    ns = "window" + (ns ? "." + ns : "");
+    return '\n\
+    (function(){ \n\
         var count = 0; \n\
         var log=function(obj) { \n\
-            var str = "", \n\
-                args = log.arguments; \n\
-            for (var i = 0; i < args.length; i++) { \n\
-                try { \n\
-                    str += " | " + JSON.stringify(args[i]); \n\
-                } catch(error) { \n\
-                    str += ", [cycle]"; \n\
-                } \n\
-            } \n\
+            if(typeof jsDump !== "undefined") \n\
+              var str = jsDump.parse(obj); \n\
+            else \n\
+              var str = JSON.stringify(obj); \n\
             var img = document.createElement("img"); \n\
             var url = "http://' + rHost + ':' + port + '/?count=" + count + "&console=" + encodeURIComponent(str); \n\
             img.src = url; \n\
             ++count; \n\
         } \n\
+        ' + ns + ' = ' + ns + ' || {} \n\
         ' + ns + '.log = log; \n\
-    })()';    
+    })()';
 }
 
 var queue = {};
@@ -84,20 +78,20 @@ var logged = 0;
 
 http.createServer(function (req, res) {
     var request = url.parse(req.url, true);
-
     var msg =  request.query.console;
     if (msg) {
+        msg = decodeURIComponent(msg);
         var count = Number(request.query.count);
         if (count === logged) {
-            console.log(msg);
+          console.log(msg);
+          ++logged;
+          while (logged in queue) {
+            console.log(queue[logged]);
+            delete queue[logged];
             ++logged;
-            while (logged in queue) {
-                console.log(queue[logged]);
-                delete queue[logged];
-                ++logged;
-            }
+          }
         } else {
-            queue[count] = msg;
+          queue[count] = msg;
         }
         res.writeHead(200, {'Content-Type': 'image/jpeg'});
         res.end("");
