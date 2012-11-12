@@ -44,47 +44,66 @@ var http = require('http'),
     host = (process.argv[2]) ? process.argv[2] : "localhost",
     port = (process.argv[3]) ? process.argv[3] : 8124;
     rHost = (process.argv[4]) ? process.argv[4] : host;
-   
+
+var winston = require('winston');
+
+var logger = new winston.Logger({
+    transports: [
+        new (winston.transports.Console)({
+            colorize: true
+        })
+    ]
+});
+
 function parseJson(string){
     try{
         return JSON.parse(string);
     } catch(e){
         return false;
     }
-};
+}
 
 if (host == 'null') {
     host = undefined;
 }
 
 function returnDebugJS(ns){
-    ns = "window" + (ns ? "." + ns : "");
-    return '\n\
-    (function(){ \n\
-        var count = 0; \n\
-        var log=function(obj) { \n\
-            var str = "", \n\
-                args = log.arguments; \n\
-            for (var i = 0; i < args.length; i++) { \n\
-                try { \n\
-                    str += " | " + JSON.stringify(args[i]); \n\
-                    if(typeof jsDump !== "undefined") { \n\
-                      var str += " | " + jsDump.parse(obj); \n\
-                    } else { \n\
-                      var str += " | " + JSON.stringify(obj); \n\
-                    } \n\
-                } catch(error) { \n\
-                    str += ", [cycle]"; \n\
-                } \n\
-            } \n\
-            var img = document.createElement("img"); \n\
-            var url = "http://' + rHost + ':' + port + '/?count=" + count + "&console=" + encodeURIComponent(str); \n\
-            img.src = url; \n\
-            ++count; \n\
-        } \n\
-        ' + ns + ' = ' + ns + ' || {} \n\
-        ' + ns + '.log = log; \n\
-    })()';
+    ns = "console";
+    return [
+          '(function(console){'
+        , '  "use strict";'
+        , '   var log = function() {'
+        , '     '+ ns + '.oldlog(arguments);'
+        , '     var str = "",'
+        , '     args = arguments;'
+        , '     var jse = function () {'
+        , '       var seen = [];'
+        , '       return function(key, val) {'
+        , '         if (typeof val === "object") {'
+        , '           if (seen.indexOf(val) >= 0) {'
+        , '             return "cycle";'
+        , '           }'
+        , '           seen.push(val);'
+        , '         }'
+        , '         return val;'
+        , '       };'
+        , '    };'
+        , '    for (var i = 0; i < args.length; i++) {'
+        , '      try {'
+        , '        str += " | " + Ext.encode(args[i]);'
+        , '      } catch (e) {'
+        , '        str += " | [cycled]"'
+        , '      }'
+        , '    }'
+        , '    var img = document.createElement("img");'
+        , '    var url = "http://' + rHost + ':' + port + '/?count=" + Date.now() + "&console=" + encodeURIComponent(str);'
+        , '    img.src = url;'
+        , '  };'
+        , '  '
+        , ' ' + ns + '.oldlog = ' + ns + '.log;'
+        , ' ' + ns + '.log = log;'
+        , '})(window.console);'
+    ].join('\n');
 }
 
 var queue = {};
@@ -94,19 +113,22 @@ http.createServer(function (req, res) {
     var request = url.parse(req.url, true);
     var msg =  request.query.console;
     if (msg) {
-        msg = decodeURIComponent(msg);
-        var count = Number(request.query.count);
-        if (count === logged) {
-          console.log(msg);
-          ++logged;
-          while (logged in queue) {
-            console.log(queue[logged]);
-            delete queue[logged];
-            ++logged;
-          }
-        } else {
-          queue[count] = msg;
+        try {
+            msg = decodeURIComponent(msg);
+        } catch(e) {
+            /* handle error */
         }
+
+        var meta = {
+            client: req.headers
+        };
+
+        if (/(error|exception)/.test(msg)) {
+            logger.error(msg, meta);
+        } else {
+            logger.info(msg, meta);
+        }
+
         res.writeHead(200, {'Content-Type': 'image/jpeg'});
         res.end("");
     } else if (req.url.indexOf("/debug.js") === 0){
@@ -117,6 +139,5 @@ http.createServer(function (req, res) {
         res.writeHead(200, {'Content-Type': 'image/gif'});
         res.end("");
     }
-    
 }).listen(port, host);
-console.log('Server running at http://'+rHost+':'+port+'/');
+logger.info('Server running at http://'+rHost+':'+port+'/');

@@ -1,0 +1,24 @@
+{
+  "name": "node-remote-console",
+  "version": "0.1.0",
+  "description": "Injectable, but simple console.log replacement",
+  "main": "remote_console.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tv/node-remote-console.git"
+  },
+  "keywords": [
+    "browser"
+  ],
+  "author": "",
+  "license": "BSD",
+  "dependencies": {
+    "winston": "~0.6.2"
+  }
+}
